@@ -1,15 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
 import BottomSheet from '../ui/BottomSheet';
 import { useApp } from '../../context/AppContext';
 
-const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#14b8a6', '#ef4444', '#8b5cf6', '#f97316', '#06b6d4'];
-const ICONS = ['tag', 'shopping-cart', 'car', 'home', 'heart-pulse', 'gamepad-2', 'zap', 'gift'];
+const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#14b8a6', '#ef4444', '#8b5cf6', '#f97316', '#06b6d4', '#22c55e', '#94a3b8'];
+const ICONS = ['tag', 'shopping-cart', 'car', 'home', 'heart-pulse', 'gamepad-2', 'zap', 'gift', 'utensils', 'plane'];
 
-export default function CategoryFormSheet({ open, onClose }) {
-  const { addCategory } = useApp();
-  const [form, setForm] = useState({ name: '', color: COLORS[0], icon: ICONS[0], budget_limit: '' });
+const EMPTY_FORM = { name: '', color: COLORS[0], icon: ICONS[0], budget_limit: '' };
+
+export default function CategoryFormSheet({ open, onClose, category }) {
+  const { addCategory, editCategory, removeCategory } = useApp();
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = Boolean(category);
+
+  useEffect(() => {
+    if (open) {
+      if (category) {
+        setForm({
+          name: category.name,
+          color: category.color,
+          icon: category.icon,
+          budget_limit: category.budget_limit > 0 ? String(category.budget_limit) : '',
+        });
+      } else {
+        setForm(EMPTY_FORM);
+      }
+      setError('');
+    }
+  }, [open, category]);
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -18,8 +40,12 @@ export default function CategoryFormSheet({ open, onClose }) {
     setSaving(true);
     setError('');
     try {
-      await addCategory({ ...form, budget_limit: parseFloat(form.budget_limit) || 0 });
-      setForm({ name: '', color: COLORS[0], icon: ICONS[0], budget_limit: '' });
+      const payload = { ...form, budget_limit: parseFloat(form.budget_limit) || 0 };
+      if (isEdit) {
+        await editCategory(category.id, payload);
+      } else {
+        await addCategory(payload);
+      }
       onClose();
     } catch (e) {
       setError(e.message);
@@ -28,8 +54,21 @@ export default function CategoryFormSheet({ open, onClose }) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm(`¿Eliminar la categoría "${category.name}"?\nLas transacciones quedarán sin categoría.`)) return;
+    setDeleting(true);
+    try {
+      await removeCategory(category.id);
+      onClose();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <BottomSheet open={open} onClose={onClose} title="Nueva categoría">
+    <BottomSheet open={open} onClose={onClose} title={isEdit ? 'Editar categoría' : 'Nueva categoría'}>
       <div className="flex flex-col gap-4">
         <div>
           <label className="text-[#8e8e93] text-xs font-medium block mb-1">Nombre</label>
@@ -43,7 +82,7 @@ export default function CategoryFormSheet({ open, onClose }) {
 
         <div>
           <label className="text-[#8e8e93] text-xs font-medium block mb-2">Color</label>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2.5 flex-wrap">
             {COLORS.map((c) => (
               <button
                 key={c}
@@ -70,11 +109,22 @@ export default function CategoryFormSheet({ open, onClose }) {
 
         <button
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || deleting}
           className="w-full bg-[#0a84ff] text-white font-semibold rounded-2xl py-3.5 text-sm mt-2 active:scale-[0.97] transition-transform disabled:opacity-50"
         >
-          {saving ? 'Guardando…' : 'Crear categoría'}
+          {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear categoría'}
         </button>
+
+        {isEdit && (
+          <button
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="w-full flex items-center justify-center gap-2 text-[#ff453a] text-sm font-medium py-2 disabled:opacity-50"
+          >
+            <Trash2 size={15} />
+            {deleting ? 'Eliminando…' : 'Eliminar categoría'}
+          </button>
+        )}
       </div>
     </BottomSheet>
   );

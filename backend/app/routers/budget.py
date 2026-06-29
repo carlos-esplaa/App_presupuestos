@@ -2,6 +2,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.deps import get_db
 from app.models import Category
 from app.schemas import BudgetCurrentOut, BudgetCategoryOut
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/budget", tags=["budget"])
 
 
 @router.get("/current", response_model=BudgetCurrentOut)
-def current_budget(db: Session = Depends(get_db)):
+def current_budget(db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     cycle = get_current_cycle(db)
     categories = db.query(Category).all()
 

@@ -14,7 +14,6 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
     _seed_default_data()
 
@@ -64,7 +63,7 @@ def _seed_default_data() -> None:
         db.close()
 
 
-app = FastAPI(title="Presupuesto Personal API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Presupuesto Personal API", version="1.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,8 +73,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.auth import router as auth_router  # noqa: E402
 from app.routers import budget, transactions, categories, sync, onboarding, setup  # noqa: E402
 
+app.include_router(auth_router, prefix="/api")
 app.include_router(budget.router, prefix="/api")
 app.include_router(transactions.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
@@ -86,4 +87,4 @@ app.include_router(setup.router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "Presupuesto Personal API"}
+    return {"status": "ok", "service": "Presupuesto Personal API", "version": "1.1.0"}

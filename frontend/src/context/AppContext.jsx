@@ -1,9 +1,10 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
-import { api } from '../api/client';
+import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import { api, clearToken } from '../api/client';
 
 const AppContext = createContext(null);
 
 const initialState = {
+  authenticated: !!localStorage.getItem('auth_token'),
   onboardingComplete: false,
   activeTab: 'home',
   budget: null,
@@ -16,6 +17,8 @@ const initialState = {
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'SET_AUTHENTICATED':
+      return { ...state, authenticated: action.payload };
     case 'SET_ONBOARDING_COMPLETE':
       return { ...state, onboardingComplete: action.payload };
     case 'SET_TAB':
@@ -37,6 +40,20 @@ function reducer(state, action) {
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Escuchar el evento de logout automático cuando el token expira
+  useEffect(() => {
+    const handler = () => {
+      dispatch({ type: 'SET_AUTHENTICATED', payload: false });
+    };
+    window.addEventListener('auth:logout', handler);
+    return () => window.removeEventListener('auth:logout', handler);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearToken();
+    dispatch({ type: 'SET_AUTHENTICATED', payload: false });
+  }, []);
 
   const refreshBudget = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: { budget: true } });
@@ -94,10 +111,29 @@ export function AppProvider({ children }) {
     return cat;
   }, [refreshCategories]);
 
+  const editCategory = useCallback(async (id, body) => {
+    const cat = await api.updateCategory(id, body);
+    await refreshCategories();
+    return cat;
+  }, [refreshCategories]);
+
+  const removeCategory = useCallback(async (id) => {
+    await api.deleteCategory(id);
+    await refreshCategories();
+  }, [refreshCategories]);
+
+  const reclassifyTransaction = useCallback(async (txId, categoryId) => {
+    const tx = await api.patchTransaction(txId, { category_id: categoryId });
+    await refreshBudget();
+    return tx;
+  }, [refreshBudget]);
+
   return (
     <AppContext.Provider value={{
       state, dispatch,
-      refreshBudget, refreshTransactions, refreshCategories, runSync, addCategory,
+      logout,
+      refreshBudget, refreshTransactions, refreshCategories,
+      runSync, addCategory, editCategory, removeCategory, reclassifyTransaction,
     }}>
       {children}
     </AppContext.Provider>

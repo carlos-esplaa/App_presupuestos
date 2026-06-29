@@ -14,6 +14,14 @@ class CategoryCreate(CategoryBase):
     pass
 
 
+class CategoryUpdate(BaseModel):
+    """Todos los campos son opcionales para permitir actualizaciones parciales."""
+    name: Optional[str] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+    budget_limit: Optional[float] = None
+
+
 class CategoryOut(CategoryBase):
     id: int
     is_system: bool
@@ -57,6 +65,11 @@ class TransactionOut(BaseModel):
     tx_type: str
 
     model_config = {"from_attributes": True}
+
+
+class TransactionPatch(BaseModel):
+    """Permite reclasificar una transacción cambiando su categoría."""
+    category_id: Optional[int] = None
 
 
 class TransactionListOut(BaseModel):
