@@ -1,0 +1,33 @@
+# Render Blueprint — despliega el backend automáticamente.
+# En render.com → New → Blueprint → conecta este repo y Render lee este archivo.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: presupuesto-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: frankfurt          # región europea (más cerca de Canarias)
+    healthCheckPath: /
+    envVars:
+      # La DATABASE_URL la pegas tú a mano desde Neon/Supabase (ver README_DEPLOY.md)
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true     # Render genera un valor aleatorio seguro
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD_HASH
+        sync: false
+      - key: GOCARDLESS_SECRET_ID
+        sync: false
+      - key: GOCARDLESS_SECRET_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: PUBLIC_URL
+        sync: false             # la URL que te da Render, ej: https://presupuesto-backend.onrender.com
+      - key: ALLOWED_ORIGINS
+        sync: false             # la URL de tu frontend en Vercel
